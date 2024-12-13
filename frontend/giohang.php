@@ -309,7 +309,6 @@ require_once('../includes/header.php');
                     <h4>Tổng tiền</h4>
                     <ul>
                         <li>Tổng: <span><?= number_format($total, 0, '', '.') . " VNĐ" ?></span></li>
-                        <li>VAT: <span><?= number_format($total * 0.1, 0, '', '.') . " VNĐ" ?></span></li>
                     </ul>
                     <h5>Phương thức giao hàng</h5>
                     <div>

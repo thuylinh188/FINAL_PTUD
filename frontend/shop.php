@@ -45,6 +45,16 @@
                 background: #f18ea7 !important;
                 border-radius: 0;
             }
+            .product_discount_item_pic{
+                height: 450px;
+                width: 100%;
+                object-fit: contain;
+            }
+            .product_item_pic{
+                height: 450px;
+                width: 100%;
+                object-fit: contain;
+            }
         </style>
     </head>
     <body>

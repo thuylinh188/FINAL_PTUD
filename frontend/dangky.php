@@ -2,7 +2,6 @@
 ob_start();  // Bắt đầu output buffering
 session_start();
 include '../includes/db.php';
-session_start();
 $is_homepage = false;
 
 // Di chuyển gọi header() lên trước bất kỳ output nào
