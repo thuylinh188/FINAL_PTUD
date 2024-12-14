@@ -1,3 +1,4 @@
+
 <?php
 ob_start();  // Bắt đầu output buffering
 session_start();
@@ -7,60 +8,53 @@ require_once('../includes/header.php');
 require_once('../includes/db.php');
 
 // Xử lý khi nhấn nút "Đặt hàng"
-$order_id = $_POST['order_id']??'';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $user_id = $_POST['user_id'];
+    $firstname = $_POST['firstname'];
+    $lastname = $_POST['lastname'];
+    $address = $_POST['address'];
+    $phone = $_POST['phone'];
+    $email = $_POST['email'];
 
-// Kiểm tra xem order_id có hợp lệ và chưa tồn tại trong bảng orders
-if (empty($order_id) || !is_numeric($order_id)) {
-    echo "";
-} else {
-    $sql_check_order = "SELECT * FROM orders WHERE id = '$order_id'";
-    $result = mysqli_query($conn, $sql_check_order);
-    
-    if (mysqli_num_rows($result) > 0) {
-        // Nếu order_id đã tồn tại, thông báo lỗi
-        echo "Mã đơn hàng đã tồn tại, vui lòng chọn mã khác.";
-    } else {
-        // Tiếp tục xử lý đơn hàng
-        $user_id = $_POST['user_id'];
-        $firstname = $_POST['firstname'];
-        $lastname = $_POST['lastname'];
-        $address = $_POST['address'];
-        $phone = $_POST['phone'];
-        $email = $_POST['email'];
+    // Tạo mã đơn hàng tự động (UUID hoặc để tự động tăng trong CSDL)
+    $order_id = uniqid('ORDER_');
 
-        // Chèn đơn hàng vào bảng orders
-        $sql_order = "INSERT INTO orders (id, user_id, firstname, lastname, address, phone, email, status, created_at, updated_at)
-                      VALUES ('$order_id', '$user_id', '$firstname', '$lastname', '$address', '$phone', '$email', 'Processing', NOW(), NOW())";
+    // Chèn đơn hàng vào bảng orders
+// Chèn đơn hàng vào bảng orders
+$sql_order = "INSERT INTO orders (user_id, firstname, lastname, address, phone, email, status, created_at, updated_at)
+              VALUES ('$user_id', '$firstname', '$lastname', '$address', '$phone', '$email', 'Processing', NOW(), NOW())";
 
-        if (mysqli_query($conn, $sql_order)) {
-            // Chèn chi tiết đơn hàng vào bảng order_details
-            foreach ($_SESSION['cart'] as $item) {
-                $product_id = $item['id'];
-                $price = isset($item['discounted_price']) && !empty($item['discounted_price']) 
-                         ? $item['discounted_price'] 
-                         : (isset($item['price']) ? $item['price'] : 0);
-                $quantity = $item['qty'];
-                $total_item = $price * $quantity;
+if (mysqli_query($conn, $sql_order)) {
+    // Lấy order_id vừa được chèn
+    $order_id = mysqli_insert_id($conn);
 
-                $sql_order_details = "INSERT INTO order_details (order_id, product_id, price, qty, total, created_at, updated_at)
-                                      VALUES ('$order_id', '$product_id', '$price', '$quantity', '$total_item', NOW(), NOW())";
-                mysqli_query($conn, $sql_order_details);
-            }
+    // Chèn chi tiết đơn hàng vào bảng order_details
+    foreach ($_SESSION['cart'] as $item) {
+        $product_id = $item['id'];
+        $price = isset($item['discounted_price']) && !empty($item['discounted_price']) 
+                 ? $item['discounted_price'] 
+                 : (isset($item['price']) ? $item['price'] : 0);
+        $quantity = $item['qty'];
+        $total_item = $price * $quantity;
 
-            // Xóa giỏ hàng sau khi đặt hàng thành công
-            unset($_SESSION['cart']);
-
-            // Chuyển hướng đến trang cảm ơn
-            header("Location: ?thankyou=1");
-            exit();
-        } else {
-            echo "Đặt hàng thất bại: " . mysqli_error($conn);
-        }
+        $sql_order_details = "INSERT INTO order_details (order_id, product_id, price, qty, total, created_at, updated_at)
+                              VALUES ('$order_id', '$product_id', '$price', '$quantity', '$total_item', NOW(), NOW())";
+        mysqli_query($conn, $sql_order_details);
     }
+
+    // Xóa giỏ hàng sau khi đặt hàng thành công
+    unset($_SESSION['cart']);
+
+    // Chuyển hướng đến trang cảm ơn
+    header("Location: ?thankyou=1");
+    exit();
+} else {
+    echo "Đặt hàng thất bại: " . mysqli_error($conn);
+}
+
 }
 ob_end_flush();  // Kết thúc output buffering
 ?>
-
 
 <!DOCTYPE html>
 <html lang="zxx">
@@ -154,10 +148,6 @@ ob_end_flush();  // Kết thúc output buffering
                     <div class="form-left">
                         <h4>Thông tin Khách hàng</h4>
                         <form action="" method="post">
-                        <div class="checkout__input">
-                                <p>Mã đơn hàng<span>*</span></p>
-                                <input type="text" name="order_id" placeholder="Mã sản phẩm" required>
-                            </div>
                             <div class="checkout__input">
                                 <p>Mã khách hàng<span>*</span></p>
                                 <input type="text" name="user_id" placeholder="Mã khách hàng" required>
@@ -196,19 +186,14 @@ ob_end_flush();  // Kết thúc output buffering
                                 $cart = isset($_SESSION['cart']) ? $_SESSION['cart'] : [];
                                 $total = 0;
                                 foreach ($cart as $item) {
-                                    // Kiểm tra và lấy giá
                                     $price = isset($item['discounted_price']) && !empty($item['discounted_price']) 
                                              ? $item['discounted_price'] 
                                              : (isset($item['price']) ? $item['price'] : 0);
-                                
-                                    // Tính tổng tiền cho sản phẩm
                                     $subtotal = $item['qty'] * $price;
                                     $total += $subtotal;
-                                
-                                    // Hiển thị sản phẩm
+
                                     echo "<li>{$item['name']} <span>" . number_format($subtotal, 0, '', '.') . " VNĐ</span></li>";
                                 }
-                                
                                 ?>
                             </ul>
                             <div class="checkout__order__total">
@@ -223,4 +208,3 @@ ob_end_flush();  // Kết thúc output buffering
     <?php endif; ?>
 </body>
 <?php include '../includes/footer.php'; ?>
-</html>
